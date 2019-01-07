@@ -198,12 +198,12 @@ def fil_para(coro):
 
 print('---- [ SELF CHECK ] ----')
 test_list = [
-    ('202.89.233.100', '80'),
-    ('www.bing.com', '80'),
+    ('216.218.186.2', '80'),
+    ('www.he.net', '80'),
 ]
 test_list_6 = [
-    ('2600:1901:0:89c5::', '443'),
-    ('gce.gocn.party', '443')
+    ('2001:470:0:76::2', '80'),
+    ('www.he.net', '80')
 ]
 if all(check(handler(*test)) for test in test_list):
     V4_AVAL = True
@@ -275,7 +275,9 @@ async def refuser(*a):
 
 app = web.Application()
 app.add_routes(routes)
+if api_key == 'example':
+    print('[WARNING] You are using default api_key and it is vulnerable. Please consider change it.')
 if V6_AVAL and not FORCE_V4:
     web.run_app(app, host='::', port=LISTENING_PORT)
 else:
-    web.run_app(app, port=4096)
+    web.run_app(app, port=LISTENING_PORT)
