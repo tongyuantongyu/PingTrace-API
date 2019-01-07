@@ -11,7 +11,7 @@ import asyncio
 MAX_TIME = 10
 TIME_OUT = 1
 geo_lookup_timeout = 20
-FORCE_V4 = True
+FORCE_V4 = False
 LISTENING_PORT = 4096
 hd = {'User-Agent': 'BestTrace/Windows V3.6.5'}
 start = 2
@@ -80,7 +80,7 @@ def handler(ping_host, ping_port, con_type=4):
     try:
         print('[{0}] IPv{1} {2}:{3} -> {4}'.format(time.strftime("%H:%M:%S", time.localtime()), con_type, ping_host, ping_port, result))
     except UnicodeEncodeError:
-        print('[{0}] IPv{1} {2}:{3} -> FAIL'.format(time.strftime("%H:%M:%S", time.localtime()), worker.__name__, ping_host, ping_port))
+        print('[{0}] IPv{1} {2}:{3} -> FAIL'.format(time.strftime("%H:%M:%S", time.localtime()), con_type, ping_host, ping_port))
     return result
 
 
@@ -170,7 +170,7 @@ async def trace_handler(host, fast=False, con_type=4, start_ttl=start, reverse=T
             try:
                 result = await asyncio.wait_for(gen_return(result_list, reverse), geo_lookup_timeout)
                 print('[{}] traceroute {} -> SUCCESS'.format(time.strftime("%H:%M:%S", time.localtime()), host))
-            except asyncio.TimeoutError:
+            except (asyncio.TimeoutError, json.decoder.JSONDecodeError):
                 result = gen_return_fast(result_list, reverse)
                 print('[{}] traceroute_fallback {} -> SUCCESS'.format(time.strftime("%H:%M:%S", time.localtime()), host))
             return web.Response(text=result)
@@ -191,17 +191,19 @@ def fil_para(coro):
             return await coro(*args)
         except KeyError:
             return web.Response(text='错误的请求指令。请检查API调用')
+        except:
+            return web.Response(text='哎呀，服务器出错了，联系下主人吧。')
     return inner
 
 
 print('---- [ SELF CHECK ] ----')
 test_list = [
-    ('216.218.186.2', '80'),
-    ('www.he.net', '80'),
+    ('202.89.233.100', '80'),
+    ('www.bing.com', '80'),
 ]
 test_list_6 = [
-    ('2001:470:0:76::2', '80'),
-    ('www.he.net', '80')
+    ('2600:1901:0:89c5::', '443'),
+    ('gce.gocn.party', '443')
 ]
 if all(check(handler(*test)) for test in test_list):
     V4_AVAL = True
