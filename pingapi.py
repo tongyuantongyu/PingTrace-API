@@ -16,6 +16,7 @@ LISTENING_PORT = 4096
 hd = {'User-Agent': 'BestTrace/Windows V3.6.5'}
 start = 2
 api_key = 'example'
+safechraaddr = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-.:'
 
 routes = web.RouteTableDef()
 
@@ -29,6 +30,10 @@ class ConnectTypeUnavailableError(Exception):
 
 
 class SelfCheckFail(Exception):
+    pass
+
+
+class UnSafeCall(Exception):
     pass
 
 
@@ -187,10 +192,13 @@ def check(r):
 
 def fil_para(coro):
     async def inner(*args):
+        print('[{}] API <{}> received request {}'.format(time.strftime("%H:%M:%S", time.localtime()), coro.__name__, args[0].query_string))
         try:
             return await coro(*args)
         except KeyError:
             return web.Response(text='错误的请求指令。请检查API调用')
+        except UnSafeCall:
+            return web.Response(text='请求存在潜在不安全。')
         except:
             return web.Response(text='哎呀，服务器出错了，联系下主人吧。')
     return inner
@@ -198,12 +206,12 @@ def fil_para(coro):
 
 print('---- [ SELF CHECK ] ----')
 test_list = [
-    ('216.218.186.2', '80'),
-    ('www.he.net', '80'),
+    ('202.89.233.100', '80'),
+    ('www.bing.com', '80'),
 ]
 test_list_6 = [
-    ('2001:470:0:76::2', '80'),
-    ('www.he.net', '80')
+    ('2600:1901:0:89c5::', '443'),
+    ('gce.gocn.party', '443')
 ]
 if all(check(handler(*test)) for test in test_list):
     V4_AVAL = True
@@ -232,39 +240,46 @@ def gen_response(ping_host, ping_port):
     return ', '.join(res_list)
 
 
+def security_check(string):
+    for char in set(string):
+        if char not in safechraaddr:
+            raise UnSafeCall
+    return string
+
+
 @routes.get('/' + api_key + '/pingapi')
 @fil_para
-async def processor(request):
-    host = request.query['ip']
+async def pingapi(request):
+    host = security_check(request.query['ip'])
     port = request.query['port']
     return web.Response(text=gen_response(host, port))
 
 
 @routes.get('/' + api_key + '/traceapi')
 @fil_para
-async def processor(request):
-    host = request.query['ip']
+async def traceapi(request):
+    host = security_check(request.query['ip'])
     return await trace_handler(host)
 
 
 @routes.get('/' + api_key + '/traceapi_fast')
 @fil_para
-async def processor(request):
-    host = request.query['ip']
+async def traceapi_fast(request):
+    host = security_check(request.query['ip'])
     return await trace_handler(host, fast=True)
 
 
 @routes.get('/' + api_key + '/traceapi_v6')
 @fil_para
-async def processor(request):
-    host = request.query['ip']
+async def traceapi_v6(request):
+    host = security_check(request.query['ip'])
     return await trace_handler(host, con_type=6)
 
 
 @routes.get('/' + api_key + '/traceapi_v6_fast')
 @fil_para
-async def processor(request):
-    host = request.query['ip']
+async def traceapi_v6_fast(request):
+    host = security_check(request.query['ip'])
     return await trace_handler(host, fast=True, con_type=6)
 
 
@@ -275,8 +290,6 @@ async def refuser(*a):
 
 app = web.Application()
 app.add_routes(routes)
-if api_key == 'example':
-    print('[WARNING] You are using default api_key and it is vulnerable. Please consider change it.')
 if V6_AVAL and not FORCE_V4:
     web.run_app(app, host='::', port=LISTENING_PORT)
 else:
