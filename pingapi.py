@@ -291,6 +291,6 @@ async def refuser(*a):
 app = web.Application()
 app.add_routes(routes)
 if V6_AVAL and not FORCE_V4:
-    web.run_app(app, host='::', port=LISTENING_PORT)
+    web.run_app(app, host=('0.0.0.0', '::'), port=LISTENING_PORT)
 else:
     web.run_app(app, port=LISTENING_PORT)
